@@ -149,7 +149,7 @@ The mode is chosen with settings in `.env`. It decides which AI steps and heavy 
 
 | Setting | Fast | Balanced | Full |
 |---|---|---|---|
-| `FAST_MODE` | true | true | false |
+| `FAST_MODE` | true | true | true |
 | `ENABLE_AI_MAPPING` | false | false | true |
 | `ENABLE_AI_DISCOVERY` | false | false | true |
 | `ENABLE_AI_RECOMMENDATIONS` | false | true | true |

@@ -79,7 +79,7 @@ Never commit `.env`. Use a long random `SECRET_KEY`.
 
 | Setting | Fast | Balanced | Full |
 |---|---|---|---|
-| `FAST_MODE` | true | true | false |
+| `FAST_MODE` | true | true | true |
 | `ENABLE_AI_MAPPING` | false | false | true |
 | `ENABLE_AI_DISCOVERY` | false | false | true |
 | `ENABLE_AI_RECOMMENDATIONS` | false | true | true |
