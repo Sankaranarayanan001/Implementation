@@ -17,17 +17,17 @@ Cleaning these files by hand is slow, inconsistent and hard to audit. This proje
 
 ## 2. Overview
 
-- **Run mode:** runs locally. Two processes: the FastAPI backend and the Streamlit frontend. No Docker or external services are required.
-- **Ingress:** the user works in the Streamlit app. Streamlit calls the FastAPI backend over HTTP with a JWT token.
+- **Run mode:** runs locally as two processes: the FastAPI backend and the Streamlit frontend. No Docker or external services are required.
+- **Ingress:** the user works in the Streamlit app, which calls the FastAPI backend over HTTP with a JWT token.
 - **Persistence:** SQLite for users, datasets and learning history; the `storage/` folder for uploaded files, cleaned files and reports.
-- **AI is optional:** the local model (Qwen3:4b through Ollama) can be switched off. Everything else works without it.
+- **AI is optional:** the local model (Qwen3:4b through Ollama) is controlled by the processing mode. Rules and library tools always do the actual cleaning.
 
 ## 3. Component Catalog
 
 ### Frontend: Streamlit (`frontend/`)
 
 - **Role:** login, upload, column mapping, issue review, recommendation review, results and downloads
-- **Files:** `app.py` (main screen), `views/` (upload and workflow pages), `services/api.py` (all calls to the backend)
+- **Files:** `app.py` (main screen), `views/upload_page.py` and `views/workflow_page.py` (pages), `services/api.py` (all calls to the backend)
 - **Backend address:** `API_BASE_URL` (default `http://127.0.0.1:8000`)
 
 ### Backend: FastAPI (`app/`)
@@ -36,9 +36,10 @@ Cleaning these files by hand is slow, inconsistent and hard to audit. This proje
 - **Role:** authentication, dataset endpoints, orchestration of the cleaning pipeline
 - **Structure:**
   - `main.py`: starts the app and registers routes
-  - `core/`: settings from `.env`, password hashing and JWT
-  - `api/routes/`: `auth.py`, `datasets.py`
-  - `models/`, `schemas/`, `database/`: tables, request and response formats, connection
+  - `core/`: `config.py` (settings from `.env`), `security.py` (password hashing, JWT)
+  - `api/`: `auth.py`, `datasets.py` (routes)
+  - `db/`: `models.py` (tables), `session.py` (connection)
+  - `schemas.py`: request and response formats
   - `services/`: all the logic (see below)
 
 ### Endpoints
@@ -61,27 +62,27 @@ All dataset endpoints require `Authorization: Bearer <token>`.
 
 ### Services layer (`app/services/`)
 
-| File | Role |
+| Folder / file | Role |
 |---|---|
 | `pipeline.py` | Controller: runs the steps in order and saves progress |
-| `io_utils.py` | Reads CSV and Excel, fixes mixed-type columns |
-| `inspection.py` | Row and column counts, data types, samples |
-| `mapping.py`, `banking_rules.py` | Column mapping; banking fields, allowed values, ranges |
-| `checks.py` | Core row-level checks used by every other step |
-| `profiling.py` | Statistics, patterns, dummy and unusual values |
-| `validation.py` | Pandera + Great Expectations + custom rules, merged into one issue list |
-| `ai_context.py`, `ai_discovery.py`, `llm.py` | Optional AI step through LangChain and Ollama |
-| `verification.py`, `results.py` | Verifies AI findings on all rows, builds the combined result |
-| `recommendation.py`, `history.py` | Cleaning actions, data-loss guard, learning history |
-| `tools.py` | Library cleaning tools and the synonym table |
-| `cleaning.py` | Runs approved actions in a fixed order |
-| `postcheck.py`, `quality.py`, `report.py` | Re-validation, quality score, cleaned Excel and HTML report |
+| `common/io_utils.py` | Reads CSV and Excel, fixes mixed-type columns |
+| `common/banking_rules.py` | Banking fields, aliases, allowed values, ranges |
+| `common/checks.py` | Core row-level checks used by every other step |
+| `intake/inspection.py` | Row and column counts, data types, samples |
+| `intake/mapping.py` | Column mapping (past choices, aliases, fuzzy matching, value patterns) |
+| `analysis/profiling.py` | Statistics, patterns, dummy and unusual values |
+| `analysis/validation.py` | Pandera + Great Expectations + custom rules, merged into one issue list |
+| `analysis/verification.py`, `results.py` | Verifies AI findings on all rows, builds the combined result |
+| `ai/llm.py`, `ai_context.py`, `ai_discovery.py` | Optional AI step through LangChain and Ollama |
+| `ai/recommendation.py`, `history.py` | Cleaning actions, data-loss guard, learning history |
+| `actions/tools.py` | Library cleaning tools and the synonym table |
+| `actions/cleaning.py` | Runs approved actions in a fixed order |
+| `reporting/postcheck.py`, `quality.py`, `report.py` | Re-validation, quality summary, cleaned Excel and HTML report |
 
 ### Optional AI: Qwen3:4b (Ollama + LangChain)
 
-- **Role:** explain issues, suggest extra findings, refine recommendations
+- **Role:** map columns, discover extra issues, write recommendations (each can be switched on or off separately)
 - **Rule:** the AI never changes data. Every AI finding is verified by Python on all rows before it is used. The AI can only choose from a fixed list of actions.
-- **Switch:** `LLM_ENABLED=true|false`
 
 ### Data stores
 
@@ -124,17 +125,38 @@ Login (JWT)
 
 1. **Upload:** the user uploads an Excel or CSV file and picks a banking category and purpose. The file is saved under `storage/<dataset id>/`.
 2. **Inspection:** Pandas reads the whole file, counts rows and columns, finds data types and takes sample values. Columns with mixed types (for example dates mixed with text) are converted to one type.
-3. **Column mapping (no AI):** each column is matched to a banking field using past mappings, an alias table, fuzzy name matching (RapidFuzz) and value patterns. The user confirms or edits the result. Confirmed mappings are remembered.
+3. **Column mapping:** each column is matched to a banking field using past mappings, an alias table, fuzzy name matching (RapidFuzz) and value patterns. The AI can help with unmatched columns in Full mode. The user confirms or edits the result, and confirmed mappings are remembered.
 4. **Profiling:** missing %, unique and duplicate counts, min, max and average, common patterns, dummy values, unusual values and correlations.
-5. **Validation:** three engines check the data and their results are merged into one issue list with row counts, severity and sample values:
+5. **Validation:** the engines check the data and their results are merged into one issue list with row counts, severity and sample values:
    - Pandera: types, ranges, formats
-   - Great Expectations: required, unique, regex
+   - Great Expectations: required, unique, regex (Full mode)
    - Custom Pandas rules: whitespace, case, outliers, duplicates, dummy values, cross-column checks
-6. **Recommendations:** each issue gets one cleaning action from a fixed list. The optional AI adds explanations. If an action would delete more than 5% of rows, it becomes "flag only" and the user decides.
+6. **Recommendations:** each issue gets one cleaning action from a fixed list. In Balanced and Full mode the AI adds explanations. If an action would delete more than 5% of rows, it becomes "flag only" and the user decides.
 7. **Human review:** the user approves, rejects or modifies each action, can edit category mappings (for example `Chk` to `Checking`) and sees data-loss warnings. Decisions are saved to the learning history.
 8. **Cleaning:** only approved actions run, in a fixed order, and every action is logged with the rows affected.
 9. **Verification:** the same checks run again on the cleaned data. Before and after counts are compared and each approved fix is confirmed.
 10. **Report:** the cleaned Excel (data, cleaning log, before and after, issues found) and an HTML report.
+
+### Processing modes
+
+The mode is chosen with settings in `.env`. It decides which AI steps and heavy engines are switched on.
+
+| Mode | What runs | AI used | Best for |
+|---|---|---|---|
+| Fast | Rules, validation checks and library tools only | None | Quick checks, large files, machines without a GPU |
+| Balanced | Fast mode plus AI-written cleaning recommendations | Recommendations only | Everyday use: clearer explanations without long waits |
+| Full | Everything: AI column mapping, AI issue discovery, AI recommendations, Great Expectations, YData profile | All AI steps | Deep analysis of a small or medium file |
+
+| Setting | Fast | Balanced | Full |
+|---|---|---|---|
+| `FAST_MODE` | true | true | false |
+| `ENABLE_AI_MAPPING` | false | false | true |
+| `ENABLE_AI_DISCOVERY` | false | false | true |
+| `ENABLE_AI_RECOMMENDATIONS` | false | true | true |
+| `ENABLE_GREAT_EXPECTATIONS` | false | false | true |
+| `ENABLE_YDATA` | false | false | true |
+
+In every mode the data is changed only by the Python tools, and only after the user approves.
 
 ### Cleaning order and tools
 
@@ -156,8 +178,8 @@ Login (JWT)
 
 ## 6. Request Path (summary)
 
-1. Streamlit button calls a function in `frontend/services/api.py`.
-2. The call reaches a route in `app/api/routes/datasets.py` with the JWT token.
+1. A Streamlit button calls a function in `frontend/services/api.py`.
+2. The call reaches a route in `app/api/datasets.py` with the JWT token.
 3. The route calls `services/pipeline.py`.
 4. The pipeline calls the service for that step and saves the result in SQLite.
 5. The response is shown in Streamlit.
@@ -170,11 +192,14 @@ Login (JWT)
 | `DATABASE_URL` | SQLite database location |
 | `STORAGE_DIR` | Folder for uploads, cleaned files and reports |
 | `CORS_ORIGINS` | Allowed browser origins for the backend |
-| `LLM_ENABLED` | Turn the AI step on or off |
+| `FAST_MODE` | Skips the slow extras; part of the processing mode settings |
+| `ENABLE_AI_MAPPING` | AI help for unmatched columns |
+| `ENABLE_AI_DISCOVERY` | AI search for extra issues |
+| `ENABLE_AI_RECOMMENDATIONS` | AI-written recommendations |
+| `ENABLE_GREAT_EXPECTATIONS` | Great Expectations engine on or off |
+| `ENABLE_YDATA` | Extra HTML profile (slow) |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | Local model address and name (`qwen3:4b`) |
 | `LLM_TIMEOUT_SECONDS` | Maximum wait for the model |
-| `ENABLE_GREAT_EXPECTATIONS` | Turn the Great Expectations engine on or off |
-| `ENABLE_YDATA` | Optional extra HTML profile (off by default, slow) |
 | `API_BASE_URL` | Backend address used by the Streamlit frontend |
 
 ## 8. Safety Rules
