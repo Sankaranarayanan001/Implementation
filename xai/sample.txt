@@ -1,0 +1,48 @@
+{
+  "ram": 512,
+  "battery_power": 1000,
+  "px_width": 500,
+  "px_height": 800,
+  "int_memory": 8,
+  "sc_w": 3,
+  "pc": 2,
+  "three_g": 0,
+  "sc_h": 10,
+  "fc": 1
+}
+{
+  "ram": 1024,
+  "battery_power": 1800,
+  "px_width": 800,
+  "px_height": 1200,
+  "int_memory": 16,
+  "sc_w": 5,
+  "pc": 5,
+  "three_g": 1,
+  "sc_h": 15,
+  "fc": 2
+}
+{
+  "ram": 2048,
+  "battery_power": 2800,
+  "px_width": 1200,
+  "px_height": 1920,
+  "int_memory": 32,
+  "sc_w": 7,
+  "pc": 12,
+  "three_g": 1,
+  "sc_h": 18,
+  "fc": 5
+}
+{
+  "ram": 4096,
+  "battery_power": 4000,
+  "px_width": 1440,
+  "px_height": 2560,
+  "int_memory": 64,
+  "sc_w": 10,
+  "pc": 48,
+  "three_g": 1,
+  "sc_h": 20,
+  "fc": 16
+}

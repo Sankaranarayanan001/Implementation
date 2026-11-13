@@ -1,0 +1,33 @@
+YOUR_GROQ_API_KEY
+YOUR_GROQ_API_KEY
+YOUR_GROQ_API_KEY
+
+$env:GROQ_API_KEY="YOUR_GROQ_API_KEY"
+
+calculator
+
+What is (85 + 45) * 2 - 30 / 5?
+Calculate 17% of 640 plus 22
+If I have 240 rupees and spend 35 on 4 items, how much is left?
+Calculate 2**8                          → should error (exponentiation blocked)
+What is 9999999999999999 + 1?           → should error (over 15-digit limit)
+
+weather
+What's the weather in Coimbatore right now?
+Is it cold or hot in Delhi today?
+Compare the weather in Chennai and Kolkata
+What's the weather in Xyzabadville?     → should error (city not found)
+
+web search
+Search for the latest LangGraph release notes
+What are the top results for "Groq free tier limits"?
+Find recent articles about RAG pipeline best practices
+Search for internship openings in AI/ML in Tamil Nadu
+
+combined
+What's the weather in Trichy, and also calculate 12% of 950?
+Search for today's USD to INR rate, then calculate 300 dollars in rupees
+If the temperature in Chennai is above 30°C, calculate how many liters of water 20 people need at 2 liters each
+
+
+

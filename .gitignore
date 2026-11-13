@@ -1,42 +1,64 @@
 
-# Virtual environment
+# Python virtual environments
 venv/
 .venv/
 env/
+**/venv/
+**/.venv/
 
 # Python cache
 __pycache__/
-*.pyc
-*.pyo
+**/__pycache__/
+*.py[cod]
 .pytest_cache/
 .mypy_cache/
 
-# Secrets
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
+!**/.env.example
 
-# Database
+# Databases
 *.db
 *.sqlite
 *.sqlite3
 
-# Uploaded files, cleaned files, reports
-storage/*
-!storage/.gitkeep
+# Node.js
+node_modules/
+**/node_modules/
+npm-debug.log*
 
-# Streamlit
+# Python build files
+build/
+dist/
+*.egg-info/
+
+# Generated storage files
+**/storage/*
+!**/storage/.gitkeep
+
+# Streamlit secrets
 .streamlit/secrets.toml
+**/.streamlit/secrets.toml
 
-# Great Expectations local files
+# Great Expectations
 gx/
 great_expectations/uncommitted/
 
-# IDE and OS files
+# IDE and editor
 .vscode/
 .idea/
+
+# Operating system
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Empty Git backup folder
+.git_empty_backup/

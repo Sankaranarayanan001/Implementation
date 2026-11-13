@@ -1,0 +1,20 @@
+User prompt
+    ↓
+Intent classification
+    ↓
+┌─────────────────────────────────────┐
+│ Conversational                      │ → No MCP tool
+│ Query                               │ → Query tools
+│ Action                              │ → Action tools
+│ Update                              │ → Update tools
+│ Delete/Archive                      │ → Delete tools
+│ System/Health                       │ → Health tools
+└─────────────────────────────────────┘
+    ↓
+Only relevant tools are given to Qwen
+    ↓
+Qwen selects tool + arguments
+    ↓
+MCP
+    ↓
+Trello
